@@ -93,10 +93,91 @@ static void test_archive_mime_type(void) {
 }
 
 // --- Redirect resolution ---
-// TODO: resolve_redirect causes use-after-free when entry is cached - library bug
-// static void test_archive_resolve_redirect(void) {
-//     ...
-// }
+
+static void test_redirect_resolve_non_redirect(void) {
+    // Non-redirect entry should be returned as-is
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+    czim_entry *e = czim_archive_find_entry_by_path(a, 'C', "African_Americans", NULL);
+    TEST_ASSERT_NOT_NULL(e);
+    TEST_ASSERT_FALSE(czim_entry_is_redirect(e));
+
+    czim_entry *resolved = czim_archive_resolve_redirect(a, e, 10);
+    TEST_ASSERT_EQUAL_PTR(e, resolved);  // Same pointer, no redirect followed
+    czim_entry_free(resolved);
+    czim_archive_close(a);
+}
+
+static void test_redirect_resolve_single(void) {
+    // Entry[0] is a redirect to C/Elvis_Presley (index 1494)
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+    czim_entry *e = czim_archive_get_entry_by_index(a, 0);
+    TEST_ASSERT_NOT_NULL(e);
+    TEST_ASSERT_TRUE(czim_entry_is_redirect(e));
+    TEST_ASSERT_EQUAL_UINT32(1494, e->redirect_index);
+
+    czim_entry *resolved = czim_archive_resolve_redirect(a, e, 10);
+    TEST_ASSERT_NOT_NULL(resolved);
+    TEST_ASSERT_FALSE(czim_entry_is_redirect(resolved));
+    TEST_ASSERT_EQUAL_STRING("Elvis_Presley", czim_entry_get_path(resolved));
+    czim_entry_free(resolved);
+    czim_archive_close(a);
+}
+
+static void test_redirect_resolve_max_exceeded(void) {
+    // With max_redirects=0, redirect should not be followed
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+    czim_entry *e = czim_archive_get_entry_by_index(a, 0);
+    TEST_ASSERT_NOT_NULL(e);
+    TEST_ASSERT_TRUE(czim_entry_is_redirect(e));
+
+    czim_entry *resolved = czim_archive_resolve_redirect(a, e, 0);
+    TEST_ASSERT_NULL(resolved);  // Max redirects exceeded immediately
+    czim_archive_close(a);
+}
+
+static void test_redirect_resolve_null_archive(void) {
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+    czim_entry *e = czim_archive_get_entry_by_index(a, 0);
+    TEST_ASSERT_NOT_NULL(e);
+
+    czim_entry *resolved = czim_archive_resolve_redirect(NULL, e, 10);
+    TEST_ASSERT_NULL(resolved);
+
+    // After resolve_redirect returns NULL, the input entry's refcount
+    // was NOT consumed because the NULL check happens before any free.
+    // The caller still owns the entry and must free it.
+    czim_entry_free(e);
+    czim_archive_close(a);
+}
+
+static void test_redirect_resolve_null_entry(void) {
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+
+    czim_entry *resolved = czim_archive_resolve_redirect(a, NULL, 10);
+    TEST_ASSERT_NULL(resolved);
+    czim_archive_close(a);
+}
+
+static void test_redirect_resolve_then_read_blob(void) {
+    // Resolve a redirect, then read the blob from the resolved entry
+    czim_archive *a = czim_archive_open(get_test_zim_path());
+    czim_entry *e = czim_archive_get_entry_by_index(a, 0);
+    TEST_ASSERT_NOT_NULL(e);
+    TEST_ASSERT_TRUE(czim_entry_is_redirect(e));
+
+    czim_entry *resolved = czim_archive_resolve_redirect(a, e, 10);
+    TEST_ASSERT_NOT_NULL(resolved);
+    TEST_ASSERT_FALSE(czim_entry_is_redirect(resolved));
+
+    // Read blob from resolved entry
+    czim_blob blob = czim_archive_get_blob(a, resolved);
+    TEST_ASSERT_NOT_NULL(blob.data);
+    TEST_ASSERT_TRUE(blob.size > 0);
+    czim_blob_free(&blob);
+
+    czim_entry_free(resolved);
+    czim_archive_close(a);
+}
 
 // --- Metadata ---
 
@@ -202,8 +283,12 @@ void run_archive_tests(void) {
     RUN_TEST(test_archive_mime_type);
 
     // Redirect resolution
-    // TODO: resolve_redirect causes use-after-free when entry is cached - library bug
-    // RUN_TEST(test_archive_resolve_redirect);
+    RUN_TEST(test_redirect_resolve_non_redirect);
+    RUN_TEST(test_redirect_resolve_single);
+    RUN_TEST(test_redirect_resolve_max_exceeded);
+    RUN_TEST(test_redirect_resolve_null_archive);
+    RUN_TEST(test_redirect_resolve_null_entry);
+    RUN_TEST(test_redirect_resolve_then_read_blob);
 
     // Metadata
     RUN_TEST(test_archive_find_metadata_counter);
