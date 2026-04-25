@@ -4,12 +4,30 @@ project(libczim VERSION 1.0.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /std:c11 /experimental:c11atomics")
+endif()
+
 # ---------- Options ----------
 option(CZIM_BUILD_TESTS "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 
 # ---------- Dependencies ----------
 find_package(zstd REQUIRED)
+
+# zstd exports different target names depending on version/platform
+if(TARGET zstd::libzstd)
+    set(ZSTD_TARGET zstd::libzstd)
+elseif(TARGET zstd::zstd)
+    set(ZSTD_TARGET zstd::zstd)
+elseif(TARGET zstd::zstd_static)
+    set(ZSTD_TARGET zstd::zstd_static)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
+    set(ZSTD_TARGET PkgConfig::ZSTD)
+endif()
+
 find_package(LibLZMA REQUIRED)
 add_subdirectory(deps/uobject)
 
@@ -29,7 +47,7 @@ target_include_directories(czim
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
             $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(czim PUBLIC uobject zstd::libzstd LibLZMA::LibLZMA)
+target_link_libraries(czim PUBLIC uobject ${ZSTD_TARGET} LibLZMA::LibLZMA)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(czim PUBLIC pthread)
 endif()
