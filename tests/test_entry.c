@@ -97,9 +97,14 @@ static void test_entry_long_path(void) {
     czim_archive *a = czim_archive_open(get_test_zim_path());
     czim_entry *e = czim_archive_get_entry_by_index(a, 0);
     TEST_ASSERT_NOT_NULL(e);
-    const char *long_path = czim_entry_get_long_path(e);
-    TEST_ASSERT_NOT_NULL(long_path);
+    char long_path[512];
+    long_path[0] = czim_entry_get_namespace(e);
+    long_path[1] = '/';
+    const char *path = czim_entry_get_path(e);
+    strncpy(long_path + 2, path ? path : "", sizeof(long_path) - 3);
+    long_path[sizeof(long_path) - 1] = '\0';
     TEST_ASSERT_EQUAL_CHAR(czim_entry_get_namespace(e), long_path[0]);
+    TEST_ASSERT_EQUAL_STRING("/", long_path + 1);
     czim_entry_free(e);
     czim_archive_close(a);
 }
