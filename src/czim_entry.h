@@ -99,14 +99,6 @@ const char *czim_entry_get_path(const czim_entry *entry);
  */
 char czim_entry_get_namespace(const czim_entry *entry);
 
-/**
- * Get long path (namespace + '/' + path)
- * Note: uses an internal static buffer, not thread-safe
- * @param entry Entry object
- * @return Long path string (e.g. "C/African_Americans")
- */
-const char *czim_entry_get_long_path(const czim_entry *entry);
-
 #ifdef __cplusplus
 }
 #endif

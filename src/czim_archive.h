@@ -70,9 +70,9 @@ void czim_archive_close(czim_archive *archive);
 /**
  * Get UUID
  * @param archive Archive object
- * @return UUID string (static buffer)
+ * @return UUID string (heap allocated, caller must free)
  */
-const char *czim_archive_uuid(const czim_archive *archive);
+char *czim_archive_uuid(const czim_archive *archive);
 
 /**
  * Get MIME type by index

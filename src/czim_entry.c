@@ -204,18 +204,3 @@ const char *czim_entry_get_path(const czim_entry *entry) {
 char czim_entry_get_namespace(const czim_entry *entry) {
     return entry ? entry->ns : '\0';
 }
-
-const char *czim_entry_get_long_path(const czim_entry *entry) {
-    static char buf[512];
-    if (!entry || !entry->path) {
-        return NULL;
-    }
-    size_t path_len = strlen(entry->path);
-    if (path_len + 3 > sizeof(buf)) {
-        return entry->path;  // Fallback: return short path if too long
-    }
-    buf[0] = entry->ns;
-    buf[1] = '/';
-    memcpy(buf + 2, entry->path, path_len + 1);
-    return buf;
-}

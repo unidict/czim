@@ -266,31 +266,23 @@ static int build_path_narrowdown(czim_archive *archive) {
         if (!entry) {
             continue;
         }
-        // Copy long_path into local buffer (czim_entry_get_long_path uses static buffer)
-        const char *lp = czim_entry_get_long_path(entry);
-        strncpy(curr_long_path, lp ? lp : "", sizeof(curr_long_path) - 1);
-        curr_long_path[sizeof(curr_long_path) - 1] = '\0';
+        make_ns_key(curr_long_path, sizeof(curr_long_path), entry->ns, entry->path);
 
         if (first_entry) {
-            // First entry: store the actual long path (ns/path)
             czim_narrowdown_add(archive->path_narrowdown, curr_long_path, i);
             first_entry = false;
             czim_entry_free(entry);
             continue;
         }
 
-        // Get long path of previous consecutive entry for pseudo-key generation (i-1, i)
         czim_entry *prev_entry = czim_archive_get_entry_by_index(archive, i - 1);
         if (!prev_entry) {
             czim_narrowdown_add(archive->path_narrowdown, curr_long_path, i);
             czim_entry_free(entry);
             continue;
         }
-        const char *plp = czim_entry_get_long_path(prev_entry);
-        strncpy(prev_long_path_buf, plp ? plp : "", sizeof(prev_long_path_buf) - 1);
-        prev_long_path_buf[sizeof(prev_long_path_buf) - 1] = '\0';
+        make_ns_key(prev_long_path_buf, sizeof(prev_long_path_buf), prev_entry->ns, prev_entry->path);
 
-        // Generate pseudo-key from (i-1, i): result <= long_path[i], similar to direct sampling
         shortest_string_in_between(prev_long_path_buf, curr_long_path, pseudo_key, sizeof(pseudo_key));
 
         czim_narrowdown_add(archive->path_narrowdown, pseudo_key, i);
@@ -303,9 +295,8 @@ static int build_path_narrowdown(czim_archive *archive) {
     if ((count - 1) % step != 0) {
         czim_entry *last = czim_archive_get_entry_by_index(archive, count - 1);
         if (last) {
-            const char *llp = czim_entry_get_long_path(last);
-            czim_narrowdown_add(archive->path_narrowdown,
-                                llp ? llp : "", count - 1);
+            make_ns_key(curr_long_path, sizeof(curr_long_path), last->ns, last->path);
+            czim_narrowdown_add(archive->path_narrowdown, curr_long_path, count - 1);
             czim_entry_free(last);
         }
     }
@@ -732,9 +723,12 @@ void czim_archive_close(czim_archive *archive) {
 // Archive properties
 // ============================================================
 
-const char *czim_archive_uuid(const czim_archive *archive) {
-    static char uuid_str[37];
+char *czim_archive_uuid(const czim_archive *archive) {
     if (!archive) {
+        return NULL;
+    }
+    char *uuid_str = malloc(37);
+    if (!uuid_str) {
         return NULL;
     }
     czim_uuid_to_string(&archive->header.uuid, uuid_str);
