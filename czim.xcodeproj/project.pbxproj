@@ -36,10 +36,11 @@
 
 /* Begin PBXFileReference section */
 		692F1DDD2F91FA610037745D /* libczim.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libczim.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		692F1FD62F926A580037745D /* tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tests; sourceTree = BUILT_PRODUCTS_DIR; };
+		692F1FD62F926A580037745D /* czim-tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "czim-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
 		692F1FE52F92724A0037745D /* libzstd.1.5.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libzstd.1.5.7.dylib; path = ../../../../opt/homebrew/Cellar/zstd/1.5.7_1/lib/libzstd.1.5.7.dylib; sourceTree = "<group>"; };
 		692F1FE72F9272CF0037745D /* liblzma.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = liblzma.5.dylib; path = ../../../../opt/homebrew/Cellar/xz/5.8.2/lib/liblzma.5.dylib; sourceTree = "<group>"; };
 		692F26A52F9765170037745D /* uobject.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = uobject.xcodeproj; sourceTree = "<group>"; };
+		6989872A2FDE451E00D4E83D /* uobject.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = uobject.xcodeproj; sourceTree = "<group>"; };
 		69F07E502F985B800045BB3B /* uobject.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = uobject.xcodeproj; sourceTree = "<group>"; };
 		69F07EC72F986DBE0045BB3B /* uobject.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = uobject.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -115,7 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				692F1DDD2F91FA610037745D /* libczim.a */,
-				692F1FD62F926A580037745D /* tests */,
+				692F1FD62F926A580037745D /* czim-tests */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -130,6 +131,13 @@
 			sourceTree = "<group>";
 		};
 		692F26A72F9765170037745D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6989872C2FDE451E00D4E83D /* Products */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -185,9 +193,9 @@
 			productReference = 692F1DDD2F91FA610037745D /* libczim.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		692F1FD52F926A580037745D /* tests */ = {
+		692F1FD52F926A580037745D /* czim-tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 692F1FDC2F926A590037745D /* Build configuration list for PBXNativeTarget "tests" */;
+			buildConfigurationList = 692F1FDC2F926A590037745D /* Build configuration list for PBXNativeTarget "czim-tests" */;
 			buildPhases = (
 				692F1FD22F926A580037745D /* Sources */,
 				692F1FD32F926A580037745D /* Frameworks */,
@@ -201,11 +209,11 @@
 			fileSystemSynchronizedGroups = (
 				692F1FD72F926A590037745D /* tests */,
 			);
-			name = tests;
+			name = "czim-tests";
 			packageProductDependencies = (
 			);
 			productName = tests;
-			productReference = 692F1FD62F926A580037745D /* tests */;
+			productReference = 692F1FD62F926A580037745D /* czim-tests */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -243,6 +251,10 @@
 					ProjectRef = 69F07E502F985B800045BB3B /* uobject.xcodeproj */;
 				},
 				{
+					ProductGroup = 6989872C2FDE451E00D4E83D /* Products */;
+					ProjectRef = 6989872A2FDE451E00D4E83D /* uobject.xcodeproj */;
+				},
+				{
 					ProductGroup = 69F07EC92F986DBE0045BB3B /* Products */;
 					ProjectRef = 69F07EC72F986DBE0045BB3B /* uobject.xcodeproj */;
 				},
@@ -254,7 +266,7 @@
 			projectRoot = "";
 			targets = (
 				692F1DDC2F91FA610037745D /* czim */,
-				692F1FD52F926A580037745D /* tests */,
+				692F1FD52F926A580037745D /* czim-tests */,
 			);
 		};
 /* End PBXProject section */
@@ -503,7 +515,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		692F1FDC2F926A590037745D /* Build configuration list for PBXNativeTarget "tests" */ = {
+		692F1FDC2F926A590037745D /* Build configuration list for PBXNativeTarget "czim-tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				692F1FDA2F926A590037745D /* Debug */,
