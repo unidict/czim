@@ -29,7 +29,11 @@ else()
 endif()
 
 find_package(LibLZMA REQUIRED)
-add_subdirectory(deps/uobject)
+# uobject submodule (guarded so the unidict superbuild can provide a single
+# uobject target; standalone czim builds still create their own).
+if(NOT TARGET uobject)
+    add_subdirectory(deps/uobject)
+endif()
 
 # ---------- Library ----------
 file(GLOB CZIM_SOURCES src/*.c)
