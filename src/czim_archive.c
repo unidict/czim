@@ -18,7 +18,8 @@
 // ============================================================
 
 typedef struct {
-    bool found;
+    bool valid;    // false = init failed (ptrs load error), index is meaningless
+    bool found;    // true = exact match
     uint32_t index;
 } czim_findx_result;
 
@@ -401,7 +402,7 @@ static int build_title_narrowdown(czim_archive *archive) {
 static int compare_path_ns(czim_archive *archive, uint32_t index, char ns, const char *path) {
     czim_entry *entry = czim_archive_get_entry_by_index(archive, index);
     if (!entry) {
-        return 0;
+        return 1;  // corrupt entry, treat as "greater" so binary search skips it
     }
 
     int result;
@@ -417,16 +418,12 @@ static int compare_path_ns(czim_archive *archive, uint32_t index, char ns, const
 }
 
 static int compare_title_ns(czim_archive *archive, uint32_t index, char ns, const char *title) {
-    if (!archive->title_ptrs) {
-        if (load_title_ptrs(archive) != CZIM_OK) {
-            return 0;
-        }
-    }
+    // title_ptrs already loaded by findx_title entry point, skip reload
 
     uint32_t entry_index = (uint32_t)archive->title_ptrs[index];
     czim_entry *entry = czim_archive_get_entry_by_index(archive, entry_index);
     if (!entry) {
-        return 0;
+        return 1;  // corrupt entry, treat as "greater" so binary search skips it
     }
 
     int result;
@@ -453,7 +450,8 @@ static int compare_title_ns(czim_archive *archive, uint32_t index, char ns, cons
  * - found is true if entry at index exactly matches (ns, path)
  */
 static czim_findx_result findx_path(czim_archive *archive, char ns, const char *path) {
-    czim_findx_result result = {false, 0};
+    // defaults: valid=false, set to true only on success
+    czim_findx_result result = {false, false, 0};
 
     if (!archive || !path) {
         return result;
@@ -461,7 +459,7 @@ static czim_findx_result findx_path(czim_archive *archive, char ns, const char *
 
     // Load URL pointers
     if (load_path_ptrs(archive) != CZIM_OK) {
-        return result;
+        return result;  // valid=false
     }
 
     // Build Path NarrowDown index (if not yet built)
@@ -474,8 +472,6 @@ static czim_findx_result findx_path(czim_archive *archive, char ns, const char *
     uint32_t right = count;
 
     // Use NarrowDown to narrow search range
-    // NarrowDown is built from all entries (mixed namespaces).
-    // Only use it if the range is meaningful (>1 entry), otherwise fall back to full range.
     if (archive->path_narrowdown) {
         char ns_key[512];
         make_ns_key(ns_key, sizeof(ns_key), ns, path);
@@ -496,6 +492,7 @@ static czim_findx_result findx_path(czim_archive *archive, char ns, const char *
         }
     }
 
+    result.valid = true;
     result.index = left;
 
     // Check if exact match
@@ -511,7 +508,7 @@ static czim_findx_result findx_path(czim_archive *archive, char ns, const char *
  * Same semantics as findx_path but for title index.
  */
 static czim_findx_result findx_title(czim_archive *archive, char ns, const char *title) {
-    czim_findx_result result = {false, 0};
+    czim_findx_result result = {false, false, 0};
 
     if (!archive || !title) {
         return result;
@@ -519,7 +516,7 @@ static czim_findx_result findx_title(czim_archive *archive, char ns, const char 
 
     // Load title pointers
     if (load_title_ptrs(archive) != CZIM_OK) {
-        return result;
+        return result;  // valid=false
     }
 
     // Build Title NarrowDown index (if not yet built)
@@ -550,6 +547,7 @@ static czim_findx_result findx_title(czim_archive *archive, char ns, const char 
         }
     }
 
+    result.valid = true;
     result.index = left;
 
     // Check if exact match
@@ -846,7 +844,7 @@ czim_entry *czim_archive_get_entry_by_index(czim_archive *archive, uint32_t inde
 
 czim_entry *czim_archive_find_entry_by_path(czim_archive *archive, char ns, const char *path, uint32_t *out_index) {
     czim_findx_result r = findx_path(archive, ns, path);
-    if (!r.found) {
+    if (!r.valid || !r.found) {
         return NULL;
     }
     if (out_index) {
@@ -857,7 +855,7 @@ czim_entry *czim_archive_find_entry_by_path(czim_archive *archive, char ns, cons
 
 czim_entry *czim_archive_find_entry_by_title(czim_archive *archive, char ns, const char *title, uint32_t *out_index) {
     czim_findx_result r = findx_title(archive, ns, title);
-    if (!r.found) {
+    if (!r.valid || !r.found) {
         return NULL;
     }
     uint32_t entry_index = (uint32_t)archive->title_ptrs[r.index];
@@ -917,6 +915,7 @@ int czim_archive_find_entry_by_path_prefix(czim_archive *archive, char ns, const
 
     // start = lower_bound of prefix
     czim_findx_result r1 = findx_path(archive, ns, prefix);
+    if (!r1.valid) return CZIM_ERROR_IO;
     *start_index = r1.index;
 
     // end = lower_bound of prefix with last char incremented (libzim's path.back()++ trick)
@@ -924,6 +923,7 @@ int czim_archive_find_entry_by_path_prefix(czim_archive *archive, char ns, const
     if (prefix_len == 0) {
         // Empty prefix: find lower_bound of next namespace
         czim_findx_result r2 = findx_path(archive, ns + 1, "");
+        if (!r2.valid) return CZIM_ERROR_IO;
         *end_index = r2.index;
     } else {
         char end_prefix[512];
@@ -934,6 +934,7 @@ int czim_archive_find_entry_by_path_prefix(czim_archive *archive, char ns, const
             end_prefix[prefix_len - 1]++;
             end_prefix[prefix_len] = '\0';
             czim_findx_result r2 = findx_path(archive, ns, end_prefix);
+            if (!r2.valid) return CZIM_ERROR_IO;
             *end_index = r2.index;
         }
     }
@@ -949,12 +950,27 @@ int czim_archive_find_entry_by_title_prefix(czim_archive *archive, char ns, cons
 
     // start = lower_bound of prefix
     czim_findx_result r1 = findx_title(archive, ns, prefix);
+    if (!r1.valid) {
+        // No title index → empty range; real IO error → propagate
+        if (czim_header_has_title_index(&archive->header)) {
+            return CZIM_ERROR_IO;
+        }
+        *start_index = *end_index = 0;
+        return CZIM_OK;
+    }
     *start_index = r1.index;
 
     // end = lower_bound of incremented prefix
     size_t prefix_len = strlen(prefix);
     if (prefix_len == 0) {
         czim_findx_result r2 = findx_title(archive, ns + 1, "");
+        if (!r2.valid) {
+            *end_index = *start_index;
+            if (czim_header_has_title_index(&archive->header)) {
+                return CZIM_ERROR_IO;
+            }
+            return CZIM_OK;
+        }
         *end_index = r2.index;
     } else {
         char end_prefix[512];
@@ -965,6 +981,7 @@ int czim_archive_find_entry_by_title_prefix(czim_archive *archive, char ns, cons
             end_prefix[prefix_len - 1]++;
             end_prefix[prefix_len] = '\0';
             czim_findx_result r2 = findx_title(archive, ns, end_prefix);
+            if (!r2.valid) return CZIM_ERROR_IO;
             *end_index = r2.index;
         }
     }
